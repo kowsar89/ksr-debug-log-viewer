@@ -1,21 +1,21 @@
 <?php
 
-namespace kowsarhossain\dlv;
+namespace kowsarhossain\ksrdlv;
 
 class Ajax {
 
 	public function __construct() {
-		add_action( 'wp_ajax_dlv_get_log', array( $this, 'get_log' ) );
-		add_action( 'wp_ajax_dlv_save_log', array( $this, 'save_log' ) );
-		add_action( 'wp_ajax_dlv_delete_log', array( $this, 'delete_log' ) );
-		add_action( 'wp_ajax_dlv_toggle_constant', array( $this, 'toggle_constant' ) );
+		add_action( 'wp_ajax_ksrdlv_get_log', array( $this, 'get_log' ) );
+		add_action( 'wp_ajax_ksrdlv_save_log', array( $this, 'save_log' ) );
+		add_action( 'wp_ajax_ksrdlv_delete_log', array( $this, 'delete_log' ) );
+		add_action( 'wp_ajax_ksrdlv_toggle_constant', array( $this, 'toggle_constant' ) );
 	}
 
 	private function verify() {
-		check_ajax_referer( 'dlv_nonce', 'nonce' );
+		check_ajax_referer( 'ksrdlv_nonce', 'nonce' );
 
 		if ( !current_user_can( Admin_Page::CAPABILITY ) ) {
-			wp_send_json_error( array( 'message' => __( 'You are not allowed to do this.', 'debug-log-viewer' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'You are not allowed to do this.', 'ksr-debug-log-viewer' ) ), 403 );
 		}
 	}
 

@@ -1,11 +1,11 @@
 <?php
 
-namespace kowsarhossain\dlv;
+namespace kowsarhossain\ksrdlv;
 
 class Admin_Page {
 
-	const SLUG       = 'debug-log-viewer';
-	const SCREEN_ID  = 'tools_page_debug-log-viewer';
+	const SLUG       = 'ksr-debug-log-viewer';
+	const SCREEN_ID  = 'tools_page_ksr-debug-log-viewer';
 	const CAPABILITY = 'manage_options';
 
 	public function __construct() {
@@ -14,8 +14,8 @@ class Admin_Page {
 
 	public function add_menu(){
 		add_management_page(
-			__( 'Debug Log Viewer', 'debug-log-viewer' ),
-			__( 'Debug Log', 'debug-log-viewer' ),
+			__( 'KSR Debug Log Viewer', 'ksr-debug-log-viewer' ),
+			__( 'Debug Log', 'ksr-debug-log-viewer' ),
 			self::CAPABILITY,
 			self::SLUG,
 			array( $this, 'render' )
@@ -28,28 +28,28 @@ class Admin_Page {
 		$stat     = Helper::stat();
 
 		$constants = array(
-			'WP_DEBUG'         => __( 'Enables debug mode across WordPress.', 'debug-log-viewer' ),
-			'WP_DEBUG_LOG'     => __( 'Saves errors to the debug.log file.', 'debug-log-viewer' ),
-			'WP_DEBUG_DISPLAY' => __( 'Shows errors in the page HTML.', 'debug-log-viewer' ),
+			'WP_DEBUG'         => __( 'Enables debug mode across WordPress.', 'ksr-debug-log-viewer' ),
+			'WP_DEBUG_LOG'     => __( 'Saves errors to the debug.log file.', 'ksr-debug-log-viewer' ),
+			'WP_DEBUG_DISPLAY' => __( 'Shows errors in the page HTML.', 'ksr-debug-log-viewer' ),
 		);
 		?>
-		<div class="wrap dlv-wrap">
-			<h1><?php esc_html_e( 'Debug Log Viewer', 'debug-log-viewer' ); ?></h1>
+		<div class="wrap ksrdlv-wrap">
+			<h1><?php esc_html_e( 'KSR Debug Log Viewer', 'ksr-debug-log-viewer' ); ?></h1>
 
-			<div class="dlv-notices"></div>
+			<div class="ksrdlv-notices"></div>
 
-			<div class="dlv-card dlv-settings">
-				<div class="dlv-constants">
+			<div class="ksrdlv-card ksrdlv-settings">
+				<div class="ksrdlv-constants">
 					<?php foreach ( $constants as $name => $desc ) : $on = $states[$name]; ?>
-						<div class="dlv-constant">
-							<label class="dlv-switch">
-								<input type="checkbox" class="dlv-toggle" data-constant="<?php echo esc_attr( $name ); ?>" <?php checked( $on ); disabled( !$writable ); ?>>
-								<span class="dlv-slider"></span>
+						<div class="ksrdlv-constant">
+							<label class="ksrdlv-switch">
+								<input type="checkbox" class="ksrdlv-toggle" data-constant="<?php echo esc_attr( $name ); ?>" <?php checked( $on ); disabled( !$writable ); ?>>
+								<span class="ksrdlv-slider"></span>
 							</label>
-							<div class="dlv-constant-info">
+							<div class="ksrdlv-constant-info">
 								<code><?php echo esc_html( $name ); ?></code>
-								<span class="dlv-badge <?php echo $on ? 'is-on' : 'is-off'; ?>" data-badge="<?php echo esc_attr( $name ); ?>">
-									<?php echo $on ? esc_html__( 'Enabled', 'debug-log-viewer' ) : esc_html__( 'Disabled', 'debug-log-viewer' ); ?>
+								<span class="ksrdlv-badge <?php echo $on ? 'is-on' : 'is-off'; ?>" data-badge="<?php echo esc_attr( $name ); ?>">
+									<?php echo $on ? esc_html__( 'Enabled', 'ksr-debug-log-viewer' ) : esc_html__( 'Disabled', 'ksr-debug-log-viewer' ); ?>
 								</span>
 								<p class="description"><?php echo esc_html( $desc ); ?></p>
 							</div>
@@ -57,43 +57,43 @@ class Admin_Page {
 					<?php endforeach; ?>
 				</div>
 
-				<p class="description dlv-hint">
-					<?php esc_html_e( 'WP_DEBUG_LOG and WP_DEBUG_DISPLAY only apply while WP_DEBUG is enabled. Changes are written to wp-config.php and take effect on the next request.', 'debug-log-viewer' ); ?>
+				<p class="description ksrdlv-hint">
+					<?php esc_html_e( 'WP_DEBUG_LOG and WP_DEBUG_DISPLAY only apply while WP_DEBUG is enabled. Changes are written to wp-config.php and take effect on the next request.', 'ksr-debug-log-viewer' ); ?>
 				</p>
 
 				<?php if ( !$writable ) : ?>
-					<p class="dlv-warning">
+					<p class="ksrdlv-warning">
 						<?php
 						/* translators: %s: wp-config.php path */
-						printf( esc_html__( '%s is not writable, so the constants cannot be changed from here.', 'debug-log-viewer' ), '<code>' . esc_html( Config::path() ?: 'wp-config.php' ) . '</code>' );
+						printf( esc_html__( '%s is not writable, so the constants cannot be changed from here.', 'ksr-debug-log-viewer' ), '<code>' . esc_html( Config::path() ?: 'wp-config.php' ) . '</code>' );
 						?>
 					</p>
 				<?php endif; ?>
 
-				<div class="dlv-view-options">
-					<label><input type="checkbox" id="dlv-wrap"> <?php esc_html_e( 'Word wrap', 'debug-log-viewer' ); ?></label>
-					<label><input type="checkbox" id="dlv-autoscroll" checked> <?php esc_html_e( 'Scroll to bottom on load', 'debug-log-viewer' ); ?></label>
+				<div class="ksrdlv-view-options">
+					<label><input type="checkbox" id="ksrdlv-wrap"> <?php esc_html_e( 'Word wrap', 'ksr-debug-log-viewer' ); ?></label>
+					<label><input type="checkbox" id="ksrdlv-autoscroll" checked> <?php esc_html_e( 'Scroll to bottom on load', 'ksr-debug-log-viewer' ); ?></label>
 				</div>
 			</div>
 
-			<div class="dlv-toolbar">
-				<div class="dlv-file-info">
+			<div class="ksrdlv-toolbar">
+				<div class="ksrdlv-file-info">
 					<span class="dashicons dashicons-media-text"></span>
-					<code class="dlv-path"><?php echo esc_html( $stat['path'] ); ?></code>
-					<span class="dlv-meta"></span>
-					<span class="dlv-dirty" hidden>● <?php esc_html_e( 'Unsaved changes', 'debug-log-viewer' ); ?></span>
+					<code class="ksrdlv-path"><?php echo esc_html( $stat['path'] ); ?></code>
+					<span class="ksrdlv-meta"></span>
+					<span class="ksrdlv-dirty" hidden>● <?php esc_html_e( 'Unsaved changes', 'ksr-debug-log-viewer' ); ?></span>
 				</div>
-				<div class="dlv-actions">
+				<div class="ksrdlv-actions">
 					<span class="spinner"></span>
-					<button type="button" class="button dlv-refresh"><span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Refresh', 'debug-log-viewer' ); ?></button>
-					<button type="button" class="button button-primary dlv-save" title="Ctrl+S"><span class="dashicons dashicons-saved"></span> <?php esc_html_e( 'Save', 'debug-log-viewer' ); ?></button>
-					<button type="button" class="button dlv-delete"><span class="dashicons dashicons-trash"></span> <?php esc_html_e( 'Delete', 'debug-log-viewer' ); ?></button>
+					<button type="button" class="button ksrdlv-refresh"><span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Refresh', 'ksr-debug-log-viewer' ); ?></button>
+					<button type="button" class="button button-primary ksrdlv-save" title="Ctrl+S"><span class="dashicons dashicons-saved"></span> <?php esc_html_e( 'Save', 'ksr-debug-log-viewer' ); ?></button>
+					<button type="button" class="button ksrdlv-delete"><span class="dashicons dashicons-trash"></span> <?php esc_html_e( 'Delete', 'ksr-debug-log-viewer' ); ?></button>
 				</div>
 			</div>
 
-			<div class="dlv-editor">
-				<div class="dlv-gutter" aria-hidden="true"></div>
-				<textarea class="dlv-textarea" spellcheck="false" wrap="off" autocomplete="off" autocapitalize="off" aria-label="<?php esc_attr_e( 'Debug log contents', 'debug-log-viewer' ); ?>"></textarea>
+			<div class="ksrdlv-editor">
+				<div class="ksrdlv-gutter" aria-hidden="true"></div>
+				<textarea class="ksrdlv-textarea" spellcheck="false" wrap="off" autocomplete="off" autocapitalize="off" aria-label="<?php esc_attr_e( 'Debug log contents', 'ksr-debug-log-viewer' ); ?>"></textarea>
 			</div>
 		</div>
 		<?php

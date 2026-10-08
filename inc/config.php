@@ -1,6 +1,6 @@
 <?php
 
-namespace kowsarhossain\dlv;
+namespace kowsarhossain\ksrdlv;
 
 class Config {
 
@@ -35,20 +35,20 @@ class Config {
 
 	public static function set( string $name, bool $value ) {
 		if ( !in_array( $name, self::CONSTANTS, true ) ) {
-			return new \WP_Error( 'invalid_constant', __( 'Invalid constant.', 'debug-log-viewer' ) );
+			return new \WP_Error( 'invalid_constant', __( 'Invalid constant.', 'ksr-debug-log-viewer' ) );
 		}
 
 		$path = self::path();
 		if ( !$path ) {
-			return new \WP_Error( 'config_missing', __( 'Could not locate wp-config.php.', 'debug-log-viewer' ) );
+			return new \WP_Error( 'config_missing', __( 'Could not locate wp-config.php.', 'ksr-debug-log-viewer' ) );
 		}
 		if ( !is_writable( $path ) ) {
-			return new \WP_Error( 'config_not_writable', __( 'wp-config.php is not writable.', 'debug-log-viewer' ) );
+			return new \WP_Error( 'config_not_writable', __( 'wp-config.php is not writable.', 'ksr-debug-log-viewer' ) );
 		}
 
 		$content = file_get_contents( $path );
 		if ( $content === false ) {
-			return new \WP_Error( 'config_unreadable', __( 'Could not read wp-config.php.', 'debug-log-viewer' ) );
+			return new \WP_Error( 'config_unreadable', __( 'Could not read wp-config.php.', 'ksr-debug-log-viewer' ) );
 		}
 
 		$literal = $value ? 'true' : 'false';
@@ -67,25 +67,25 @@ class Config {
 			// Insert a new define before the "stop editing" line, or before wp-settings.php is loaded
 			$offset = self::insert_offset( $content );
 			if ( $offset === false ) {
-				return new \WP_Error( 'config_no_anchor', __( 'Could not find a place to add the constant in wp-config.php.', 'debug-log-viewer' ) );
+				return new \WP_Error( 'config_no_anchor', __( 'Could not find a place to add the constant in wp-config.php.', 'ksr-debug-log-viewer' ) );
 			}
 			$line = "define( '$name', $literal );\n";
 			$new  = substr( $content, 0, $offset ) . $line . substr( $content, $offset );
 		}
 
 		if ( $new === null ) {
-			return new \WP_Error( 'config_regex', __( 'Could not update wp-config.php.', 'debug-log-viewer' ) );
+			return new \WP_Error( 'config_regex', __( 'Could not update wp-config.php.', 'ksr-debug-log-viewer' ) );
 		}
 
 		// Never write a file that would break the site
 		try {
 			token_get_all( $new, TOKEN_PARSE );
 		} catch ( \ParseError $e ) {
-			return new \WP_Error( 'config_parse', __( 'Aborted: the change would produce an invalid wp-config.php.', 'debug-log-viewer' ) );
+			return new \WP_Error( 'config_parse', __( 'Aborted: the change would produce an invalid wp-config.php.', 'ksr-debug-log-viewer' ) );
 		}
 
 		if ( $new !== $content && file_put_contents( $path, $new, LOCK_EX ) === false ) {
-			return new \WP_Error( 'config_write', __( 'Could not write wp-config.php.', 'debug-log-viewer' ) );
+			return new \WP_Error( 'config_write', __( 'Could not write wp-config.php.', 'ksr-debug-log-viewer' ) );
 		}
 
 		if ( function_exists( 'opcache_invalidate' ) ) {

@@ -1,19 +1,19 @@
-/* Debug Log Viewer */
+/* KSR Debug Log Viewer */
 jQuery(document).ready(function($){
 
-	var i18n      = dlv.i18n;
-	var $wrap     = $('.dlv-wrap');
-	var $notices  = $wrap.find('.dlv-notices');
-	var $editor   = $wrap.find('.dlv-editor');
-	var $textarea = $wrap.find('.dlv-textarea');
-	var $gutter   = $wrap.find('.dlv-gutter');
-	var $meta     = $wrap.find('.dlv-meta');
-	var $dirty    = $wrap.find('.dlv-dirty');
-	var $spinner  = $wrap.find('.dlv-actions .spinner');
-	var $buttons  = $wrap.find('.dlv-actions .button');
-	var $save     = $wrap.find('.dlv-save');
-	var $wrapOpt  = $('#dlv-wrap');
-	var $autoOpt  = $('#dlv-autoscroll');
+	var i18n      = ksrdlv.i18n;
+	var $wrap     = $('.ksrdlv-wrap');
+	var $notices  = $wrap.find('.ksrdlv-notices');
+	var $editor   = $wrap.find('.ksrdlv-editor');
+	var $textarea = $wrap.find('.ksrdlv-textarea');
+	var $gutter   = $wrap.find('.ksrdlv-gutter');
+	var $meta     = $wrap.find('.ksrdlv-meta');
+	var $dirty    = $wrap.find('.ksrdlv-dirty');
+	var $spinner  = $wrap.find('.ksrdlv-actions .spinner');
+	var $buttons  = $wrap.find('.ksrdlv-actions .button');
+	var $save     = $wrap.find('.ksrdlv-save');
+	var $wrapOpt  = $('#ksrdlv-wrap');
+	var $autoOpt  = $('#ksrdlv-autoscroll');
 
 	// Last loaded/saved state of the file
 	var state = { content: '', size: 0, mtime: 0, exists: false, truncated: false, writable: true };
@@ -24,7 +24,7 @@ jQuery(document).ready(function($){
 
 	function storageGet( key, fallback ) {
 		try {
-			var v = window.localStorage.getItem( 'dlv_' + key );
+			var v = window.localStorage.getItem( 'ksrdlv_' + key );
 			return v === null ? fallback : v === '1';
 		} catch ( e ) {
 			return fallback;
@@ -33,7 +33,7 @@ jQuery(document).ready(function($){
 
 	function storageSet( key, value ) {
 		try {
-			window.localStorage.setItem( 'dlv_' + key, value ? '1' : '0' );
+			window.localStorage.setItem( 'ksrdlv_' + key, value ? '1' : '0' );
 		} catch ( e ) {}
 	}
 
@@ -67,7 +67,7 @@ jQuery(document).ready(function($){
 	}
 
 	function request( action, data ) {
-		return $.post( dlv.ajax_url, $.extend( { action: action, nonce: dlv.nonce }, data || {} ) );
+		return $.post( ksrdlv.ajax_url, $.extend( { action: action, nonce: ksrdlv.nonce }, data || {} ) );
 	}
 
 	function isDirty() {
@@ -157,7 +157,7 @@ jQuery(document).ready(function($){
 		if ( busy ) return;
 		setBusy( true );
 
-		request( 'dlv_get_log' )
+		request( 'ksrdlv_get_log' )
 			.done( function( res ){
 				if ( res.success ) {
 					applyLog( res.data );
@@ -177,7 +177,7 @@ jQuery(document).ready(function($){
 		var content  = $textarea.val();
 		var conflict = false;
 
-		request( 'dlv_save_log', { content: content, size: state.size, mtime: state.mtime, force: force ? 1 : 0 } )
+		request( 'ksrdlv_save_log', { content: content, size: state.size, mtime: state.mtime, force: force ? 1 : 0 } )
 			.done( function( res ){
 				if ( res.success ) {
 					state.content = content;
@@ -212,7 +212,7 @@ jQuery(document).ready(function($){
 		if ( busy || !window.confirm( i18n.confirm_delete ) ) return;
 		setBusy( true );
 
-		request( 'dlv_delete_log' )
+		request( 'ksrdlv_delete_log' )
 			.done( function( res ){
 				if ( res.success ) {
 					applyLog( res.data );
@@ -227,7 +227,7 @@ jQuery(document).ready(function($){
 
 	function applyStates( states ) {
 		$.each( states, function( name, on ){
-			$wrap.find('.dlv-toggle[data-constant="' + name + '"]').prop( 'checked', on );
+			$wrap.find('.ksrdlv-toggle[data-constant="' + name + '"]').prop( 'checked', on );
 			$wrap.find('[data-badge="' + name + '"]')
 				.toggleClass( 'is-on', on )
 				.toggleClass( 'is-off', !on )
@@ -238,12 +238,12 @@ jQuery(document).ready(function($){
 	function toggleConstant( $input ) {
 		var name   = $input.data('constant');
 		var value  = $input.is(':checked');
-		var $label = $input.closest('.dlv-switch');
+		var $label = $input.closest('.ksrdlv-switch');
 
 		$input.prop( 'disabled', true );
 		$label.addClass('is-busy');
 
-		request( 'dlv_toggle_constant', { constant: name, value: value ? 1 : 0 } )
+		request( 'ksrdlv_toggle_constant', { constant: name, value: value ? 1 : 0 } )
 			.done( function( res ){
 				if ( res.success ) {
 					applyStates( res.data.states );
@@ -292,14 +292,14 @@ jQuery(document).ready(function($){
 		}
 	});
 
-	$wrap.on( 'click', '.dlv-save', function(){ saveLog( false ); } );
-	$wrap.on( 'click', '.dlv-delete', deleteLog );
-	$wrap.on( 'click', '.dlv-refresh', function(){
+	$wrap.on( 'click', '.ksrdlv-save', function(){ saveLog( false ); } );
+	$wrap.on( 'click', '.ksrdlv-delete', deleteLog );
+	$wrap.on( 'click', '.ksrdlv-refresh', function(){
 		if ( isDirty() && !window.confirm( i18n.confirm_reload ) ) return;
 		loadLog( true );
 	});
 
-	$wrap.on( 'change', '.dlv-toggle', function(){ toggleConstant( $(this) ); } );
+	$wrap.on( 'change', '.ksrdlv-toggle', function(){ toggleConstant( $(this) ); } );
 
 	$notices.on( 'click', '.notice-dismiss', function(){
 		$(this).closest('.notice').remove();

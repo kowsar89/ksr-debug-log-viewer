@@ -1,4 +1,4 @@
-# Debug Log Viewer
+# KSR Debug Log Viewer
 
 A WordPress plugin to view and manage your `debug.log` right from the admin, no FTP needed.
 

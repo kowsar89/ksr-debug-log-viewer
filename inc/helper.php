@@ -1,6 +1,6 @@
 <?php
 
-namespace kowsarhossain\dlv;
+namespace kowsarhossain\ksrdlv;
 
 class Helper {
 
@@ -12,11 +12,11 @@ class Helper {
 			$path = WP_DEBUG_LOG;
 		}
 
-		return apply_filters( 'dlv_log_path', $path );
+		return apply_filters( 'ksrdlv_log_path', $path );
 	}
 
 	public static function max_read_bytes(): int {
-		return (int) apply_filters( 'dlv_max_read_bytes', 5 * MB_IN_BYTES );
+		return (int) apply_filters( 'ksrdlv_max_read_bytes', 5 * MB_IN_BYTES );
 	}
 
 	public static function stat(): array {
@@ -79,7 +79,7 @@ class Helper {
 
 		if ( file_put_contents( $path, $content, LOCK_EX ) === false ) {
 			/* translators: %s: log file path */
-			return new \WP_Error( 'write_failed', sprintf( __( 'Could not write to %s. Check file permissions.', 'debug-log-viewer' ), $path ) );
+			return new \WP_Error( 'write_failed', sprintf( __( 'Could not write to %s. Check file permissions.', 'ksr-debug-log-viewer' ), $path ) );
 		}
 
 		return true;
@@ -95,7 +95,7 @@ class Helper {
 
 		if ( file_exists( $path ) ) {
 			/* translators: %s: log file path */
-			return new \WP_Error( 'delete_failed', sprintf( __( 'Could not delete %s. Check file permissions.', 'debug-log-viewer' ), $path ) );
+			return new \WP_Error( 'delete_failed', sprintf( __( 'Could not delete %s. Check file permissions.', 'ksr-debug-log-viewer' ), $path ) );
 		}
 
 		return true;
