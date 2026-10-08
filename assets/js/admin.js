@@ -326,7 +326,7 @@ jQuery(document).ready(function($){
 
 	/* ---------- Init ---------- */
 
-	$wrapOpt.prop( 'checked', storageGet( 'wrap', false ) );
+	$wrapOpt.prop( 'checked', storageGet( 'wrap', true ) );
 	$autoOpt.prop( 'checked', storageGet( 'autoscroll', true ) );
 	setWrap( $wrapOpt.is(':checked') );
 	fitHeight();

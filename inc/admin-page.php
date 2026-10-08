@@ -71,8 +71,20 @@ class Admin_Page {
 				<?php endif; ?>
 
 				<div class="ksrdlv-view-options">
-					<label><input type="checkbox" id="ksrdlv-wrap"> <?php esc_html_e( 'Word wrap', 'ksr-debug-log-viewer' ); ?></label>
-					<label><input type="checkbox" id="ksrdlv-autoscroll" checked> <?php esc_html_e( 'Scroll to bottom on load', 'ksr-debug-log-viewer' ); ?></label>
+					<label class="ksrdlv-option">
+						<span class="ksrdlv-switch">
+							<input type="checkbox" id="ksrdlv-wrap" checked>
+							<span class="ksrdlv-slider"></span>
+						</span>
+						<?php esc_html_e( 'Word wrap', 'ksr-debug-log-viewer' ); ?>
+					</label>
+					<label class="ksrdlv-option">
+						<span class="ksrdlv-switch">
+							<input type="checkbox" id="ksrdlv-autoscroll" checked>
+							<span class="ksrdlv-slider"></span>
+						</span>
+						<?php esc_html_e( 'Scroll to bottom on load', 'ksr-debug-log-viewer' ); ?>
+					</label>
 				</div>
 			</div>
 

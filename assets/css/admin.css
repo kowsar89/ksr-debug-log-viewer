@@ -75,6 +75,17 @@
 	border-top: 1px solid #f0f0f1;
 }
 
+.ksrdlv-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+}
+
+.ksrdlv-option .ksrdlv-switch {
+	margin-top: 0;
+}
+
 /* Toggle switch */
 .ksrdlv-switch {
 	position: relative;
@@ -190,11 +201,17 @@
 	margin: 0 4px 0 0;
 }
 
+.ksrdlv-actions .button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
 .ksrdlv-actions .button .dashicons {
 	font-size: 16px;
 	width: 16px;
 	height: 16px;
-	vertical-align: text-top;
+	line-height: 1;
 }
 
 .ksrdlv-actions .ksrdlv-delete {
