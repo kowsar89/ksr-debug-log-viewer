@@ -1,12 +1,12 @@
 <?php
 /**
  * Plugin Name: KSR Debug Log Viewer
- * Plugin URI: http://kowsarhossain.com/
+ * Plugin URI: https://github.com/kowsar89/ksr-debug-log-viewer/
  * Description: View, edit and delete the debug.log file, and toggle WP_DEBUG, WP_DEBUG_LOG and WP_DEBUG_DISPLAY from Tools → Debug Log
  * Version: 1.0.0
  * Requires PHP: 7.4
  * Author: Kowsar Hossain
- * Author URI: http://kowsarhossain.com
+ * Author URI: https://kowsarhossain.com
  * Text Domain: ksr-debug-log-viewer
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
