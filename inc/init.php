@@ -2,6 +2,8 @@
 
 namespace kowsarhossain\ksrdlv;
 
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 class Initialize {
 
 	public function __construct() {
