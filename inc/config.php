@@ -2,6 +2,8 @@
 
 namespace kowsarhossain\ksrdlv;
 
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 class Config {
 
 	const CONSTANTS = array( 'WP_DEBUG', 'WP_DEBUG_LOG', 'WP_DEBUG_DISPLAY' );
