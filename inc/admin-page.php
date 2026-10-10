@@ -6,11 +6,17 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class Admin_Page {
 
-	const SLUG      = 'ksr-debug-log-viewer';
-	const SCREEN_ID = 'tools_page_ksr-debug-log-viewer';
+	const SLUG       = 'ksr-debug-log-viewer';
+	const SCREEN_IDS = array( 'tools_page_ksr-debug-log-viewer', 'settings_page_ksr-debug-log-viewer-network' );
 
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
+		add_action( 'network_admin_menu', array( $this, 'add_network_menu' ) );
+	}
+
+	// When network-activated, the page lives only in Network Admin, since the log and wp-config.php are shared by all sites
+	public static function is_network_page(): bool {
+		return is_multisite() && is_plugin_active_for_network( plugin_basename( KSRDLV_FILE ) );
 	}
 
 	// The log and wp-config.php are shared by the whole network, so on multisite only super admins get access
@@ -24,7 +30,20 @@ class Admin_Page {
 	}
 
 	public function add_menu(){
+		if ( self::is_network_page() ) return;
+
 		add_management_page(
+			__( 'KSR Debug Log Viewer', 'ksr-debug-log-viewer' ),
+			__( 'Debug Log', 'ksr-debug-log-viewer' ),
+			self::capability(),
+			self::SLUG,
+			array( $this, 'render' )
+		);
+	}
+
+	public function add_network_menu(){
+		add_submenu_page(
+			'settings.php',
 			__( 'KSR Debug Log Viewer', 'ksr-debug-log-viewer' ),
 			__( 'Debug Log', 'ksr-debug-log-viewer' ),
 			self::capability(),

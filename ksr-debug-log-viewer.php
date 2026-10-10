@@ -16,6 +16,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'KSRDLV_VERSION', '1.0.0' );
+define( 'KSRDLV_FILE'   , __FILE__ );
 define( 'KSRDLV_PATH'   , plugin_dir_path( __FILE__ ) );
 define( 'KSRDLV_URL'    , plugin_dir_url( __FILE__ ) );
 
