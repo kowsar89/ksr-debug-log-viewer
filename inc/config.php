@@ -86,8 +86,11 @@ class Config {
 			return new \WP_Error( 'config_parse', __( 'Aborted: the change would produce an invalid wp-config.php.', 'ksr-debug-log-viewer' ) );
 		}
 
-		if ( $new !== $content && file_put_contents( $path, $new, LOCK_EX ) === false ) {
-			return new \WP_Error( 'config_write', __( 'Could not write wp-config.php.', 'ksr-debug-log-viewer' ) );
+		if ( $new !== $content ) {
+			$replaced = self::replace_file( $path, $new, $content );
+			if ( is_wp_error( $replaced ) ) {
+				return $replaced;
+			}
 		}
 
 		if ( function_exists( 'opcache_invalidate' ) ) {
@@ -95,6 +98,75 @@ class Config {
 		}
 
 		return self::file_states( $new );
+	}
+
+	/**
+	 * Replaces wp-config.php without ever leaving it empty or half written.
+	 *
+	 * A plain file_put_contents() empties the file before writing it. If the disk
+	 * fills up or the process dies in between, the site is left with a broken
+	 * wp-config.php that can only be fixed over FTP. So the new content is written
+	 * to a temporary file first and then renamed over the original: rename() swaps
+	 * the file in a single step, so wp-config.php is always either the old version
+	 * or the new one.
+	 *
+	 * @return true|\WP_Error
+	 */
+	private static function replace_file( string $path, string $new_content, string $old_content ) {
+		// Some hosts symlink wp-config.php. Work on the real file, or rename() would replace the link itself.
+		$target = realpath( $path ) ?: $path;
+
+		if ( is_writable( dirname( $target ) ) ) {
+			return self::replace_by_rename( $target, $new_content );
+		}
+
+		// Only the file is writable, not its folder, so a temporary file can't be created next to it
+		return self::replace_in_place( $target, $new_content, $old_content );
+	}
+
+	/** @return true|\WP_Error */
+	private static function replace_by_rename( string $target, string $new_content ) {
+		// The random part makes the name unguessable while it briefly exists. It ends in .php so that, if it
+		// is ever requested, the web server runs it instead of serving the database credentials as plain text.
+		$temp = $target . '.ksrdlv-' . wp_generate_password( 12, false ) . '.tmp.php';
+
+		// A short write (e.g. disk full) is a failure too: the original file has not been touched yet
+		if ( @file_put_contents( $temp, $new_content ) !== strlen( $new_content ) ) {
+			@unlink( $temp );
+			return self::write_error();
+		}
+
+		// A new file gets default permissions, which can be looser than the original's (e.g. 0644 instead of 0400)
+		$permissions = @fileperms( $target );
+		if ( $permissions !== false ) {
+			@chmod( $temp, $permissions & 0777 );
+		}
+
+		if ( !@rename( $temp, $target ) ) {
+			@unlink( $temp );
+			return self::write_error();
+		}
+
+		return true;
+	}
+
+	/** @return true|\WP_Error */
+	private static function replace_in_place( string $target, string $new_content, string $old_content ) {
+		if ( @file_put_contents( $target, $new_content, LOCK_EX ) === strlen( $new_content ) ) {
+			return true;
+		}
+
+		// The file was already emptied when the write failed. Putting the original content back usually succeeds,
+		// because emptying the file freed exactly the space that content needs.
+		if ( @file_put_contents( $target, $old_content, LOCK_EX ) === strlen( $old_content ) ) {
+			return self::write_error();
+		}
+
+		return new \WP_Error( 'config_corrupt', __( 'Could not write wp-config.php, and restoring its original content also failed. Restore wp-config.php over FTP before reloading the site.', 'ksr-debug-log-viewer' ) );
+	}
+
+	private static function write_error(): \WP_Error {
+		return new \WP_Error( 'config_write', __( 'Could not write wp-config.php. It has been left unchanged.', 'ksr-debug-log-viewer' ) );
 	}
 
 	// Values as written in wp-config.php, falling back to the current request
