@@ -16,3 +16,11 @@ A WordPress plugin to view and manage your `debug.log` right from the admin, no 
 
 1. Install and activate the plugin.
 2. Go to **Tools → Debug Log**.
+
+## Multisite Support
+
+All sites in a network share one `debug.log` and one `wp-config.php`, so the plugin treats them as network-wide:
+
+- **Network-activated:** the page appears only in **Network Admin → Settings → Debug Log**, not in each site's admin.
+- **Activated on a single site:** the page appears under **Tools → Debug Log** on that site.
+- In both cases, only super admins can open the page.
