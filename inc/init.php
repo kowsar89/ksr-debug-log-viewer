@@ -2,6 +2,8 @@
 
 namespace kowsarhossain\ksrdlv;
 
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 class Initialize {
 
 	public function __construct() {
@@ -12,7 +14,7 @@ class Initialize {
 	public function scripts_and_styles(){
 		$screen = get_current_screen();
 
-		if( !$screen || $screen->id != Admin_Page::SCREEN_ID ) return;
+		if( !$screen || !in_array( $screen->id, Admin_Page::SCREEN_IDS, true ) ) return;
 
 		wp_enqueue_style( 'ksrdlv-admin', KSRDLV_URL . 'assets/css/admin.css', array(), KSRDLV_VERSION );
 		wp_enqueue_script( 'ksrdlv-admin', KSRDLV_URL . 'assets/js/admin.js', array( 'jquery' ), KSRDLV_VERSION, true );

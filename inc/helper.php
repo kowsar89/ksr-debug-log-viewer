@@ -2,6 +2,8 @@
 
 namespace kowsarhossain\ksrdlv;
 
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 class Helper {
 
 	// Same rule WordPress core uses in wp_debug_mode()
@@ -13,6 +15,15 @@ class Helper {
 		}
 
 		return apply_filters( 'ksrdlv_log_path', $path );
+	}
+
+	// Only plain log files can be written or deleted, so a log path such as debug.php can never be turned into code
+	public static function is_allowed_path( string $path ): bool {
+		return in_array( strtolower( pathinfo( $path, PATHINFO_EXTENSION ) ), self::allowed_extensions(), true );
+	}
+
+	public static function allowed_extensions(): array {
+		return (array) apply_filters( 'ksrdlv_allowed_extensions', array( 'log', 'txt' ) );
 	}
 
 	public static function max_read_bytes(): int {
@@ -34,7 +45,7 @@ class Helper {
 			'size_h'    => size_format( $size, 1 ) ?: '0 B',
 			'mtime'     => $mtime,
 			'mtime_h'   => $mtime ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $mtime ) : '',
-			'writable'  => $exists ? is_writable( $path ) : is_writable( dirname( $path ) ),
+			'writable'  => Admin_Page::can_modify() && self::is_allowed_path( $path ) && ( $exists ? is_writable( $path ) : is_writable( dirname( $path ) ) ),
 		);
 	}
 
@@ -77,6 +88,10 @@ class Helper {
 	public static function write_log( string $content ) {
 		$path = self::log_path();
 
+		if ( !self::is_allowed_path( $path ) ) {
+			return self::not_allowed_error( $path );
+		}
+
 		if ( file_put_contents( $path, $content, LOCK_EX ) === false ) {
 			/* translators: %s: log file path */
 			return new \WP_Error( 'write_failed', sprintf( __( 'Could not write to %s. Check file permissions.', 'ksr-debug-log-viewer' ), $path ) );
@@ -87,6 +102,10 @@ class Helper {
 
 	public static function delete_log() {
 		$path = self::log_path();
+
+		if ( !self::is_allowed_path( $path ) ) {
+			return self::not_allowed_error( $path );
+		}
 
 		if( !file_exists( $path ) ) return true;
 
@@ -99,5 +118,10 @@ class Helper {
 		}
 
 		return true;
+	}
+
+	private static function not_allowed_error( string $path ) {
+		/* translators: 1: log file path, 2: allowed file extensions */
+		return new \WP_Error( 'path_not_allowed', sprintf( __( 'Refusing to modify %1$s: only files with these extensions can be edited or deleted: %2$s', 'ksr-debug-log-viewer' ), $path, implode( ', ', self::allowed_extensions() ) ) );
 	}
 }

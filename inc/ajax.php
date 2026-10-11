@@ -2,6 +2,8 @@
 
 namespace kowsarhossain\ksrdlv;
 
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 class Ajax {
 
 	public function __construct() {
@@ -11,11 +13,15 @@ class Ajax {
 		add_action( 'wp_ajax_ksrdlv_toggle_constant', array( $this, 'toggle_constant' ) );
 	}
 
-	private function verify() {
+	private function verify( bool $modify = false ) {
 		check_ajax_referer( 'ksrdlv_nonce', 'nonce' );
 
-		if ( !current_user_can( Admin_Page::CAPABILITY ) ) {
+		if ( !current_user_can( Admin_Page::capability() ) ) {
 			wp_send_json_error( array( 'message' => __( 'You are not allowed to do this.', 'ksr-debug-log-viewer' ) ), 403 );
+		}
+
+		if ( $modify && !Admin_Page::can_modify() ) {
+			wp_send_json_error( array( 'message' => __( 'File modifications are disabled on this site.', 'ksr-debug-log-viewer' ) ), 403 );
 		}
 	}
 
@@ -25,7 +31,7 @@ class Ajax {
 	}
 
 	public function save_log() {
-		$this->verify();
+		$this->verify( true );
 
 		$content = isset( $_POST['content'] ) ? wp_unslash( $_POST['content'] ) : '';
 		$force   = !empty( $_POST['force'] );
@@ -50,7 +56,7 @@ class Ajax {
 	}
 
 	public function delete_log() {
-		$this->verify();
+		$this->verify( true );
 
 		$result = Helper::delete_log();
 		if ( is_wp_error( $result ) ) {
@@ -61,7 +67,7 @@ class Ajax {
 	}
 
 	public function toggle_constant() {
-		$this->verify();
+		$this->verify( true );
 
 		$name  = isset( $_POST['constant'] ) ? sanitize_text_field( wp_unslash( $_POST['constant'] ) ) : '';
 		$value = !empty( $_POST['value'] ) && $_POST['value'] !== 'false';
