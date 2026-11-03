@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<ruleset name="KSR Debug Log Viewer">
+	<file>.</file>
+	<arg name="extensions" value="php"/>
+
+	<rule ref="WordPress">
+		<!-- Class files are named without the class- prefix to match the autoloader. -->
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+	</rule>
+</ruleset>

@@ -1,88 +1,125 @@
 /* KSR Debug Log Viewer */
-jQuery(document).ready(function($){
+jQuery( function( $ ) {
+	var i18n = ksrdlv.i18n;
 
-	var i18n      = ksrdlv.i18n;
-	var $wrap     = $('.ksrdlv-wrap');
-	var $notices  = $wrap.find('.ksrdlv-notices');
-	var $editor   = $wrap.find('.ksrdlv-editor');
-	var $textarea = $wrap.find('.ksrdlv-textarea');
-	var $gutter   = $wrap.find('.ksrdlv-gutter');
-	var $meta     = $wrap.find('.ksrdlv-meta');
-	var $dirty    = $wrap.find('.ksrdlv-dirty');
-	var $spinner  = $wrap.find('.ksrdlv-actions .spinner');
-	var $buttons  = $wrap.find('.ksrdlv-actions .button');
-	var $save     = $wrap.find('.ksrdlv-save');
-	var $wrapOpt  = $('#ksrdlv-wrap');
-	var $autoOpt  = $('#ksrdlv-autoscroll');
+	var $wrap             = $( '.ksrdlv-wrap' );
+	var $notices          = $wrap.find( '.ksrdlv-notices' );
+	var $editor           = $wrap.find( '.ksrdlv-editor' );
+	var $textarea         = $wrap.find( '.ksrdlv-textarea' );
+	var $gutter           = $wrap.find( '.ksrdlv-gutter' );
+	var $meta             = $wrap.find( '.ksrdlv-meta' );
+	var $dirtyIndicator   = $wrap.find( '.ksrdlv-dirty' );
+	var $spinner          = $wrap.find( '.ksrdlv-actions .spinner' );
+	var $actionButtons    = $wrap.find( '.ksrdlv-actions .button' );
+	var $saveButton       = $wrap.find( '.ksrdlv-save' );
+	var $wordWrapToggle   = $( '#ksrdlv-wrap' );
+	var $autoScrollToggle = $( '#ksrdlv-autoscroll' );
 
-	// Last loaded/saved state of the file
-	var state = { content: '', size: 0, mtime: 0, exists: false, truncated: false, writable: true };
+	// The file as last loaded or saved.
+	var file = { content: '', size: 0, mtime: 0, truncated: false, writable: true };
 	var lineCount = 0;
 	var busy = false;
 
 	/* ---------- Helpers ---------- */
 
-	function storageGet( key, fallback ) {
+	function readOption( key, fallback ) {
 		try {
-			var v = window.localStorage.getItem( 'ksrdlv_' + key );
-			return v === null ? fallback : v === '1';
+			var value = window.localStorage.getItem( 'ksrdlv_' + key );
+			return value === null ? fallback : value === '1';
 		} catch ( e ) {
 			return fallback;
 		}
 	}
 
-	function storageSet( key, value ) {
+	function saveOption( key, enabled ) {
 		try {
-			window.localStorage.setItem( 'ksrdlv_' + key, value ? '1' : '0' );
+			window.localStorage.setItem( 'ksrdlv_' + key, enabled ? '1' : '0' );
 		} catch ( e ) {}
 	}
 
-	function sprintf( str ) {
+	// Fills %s and %1$s placeholders, like PHP's sprintf().
+	function sprintf( format ) {
 		var args = Array.prototype.slice.call( arguments, 1 );
-		return str.replace( /%(\d+)\$s/g, function( m, n ){ return args[ n - 1 ]; } ).replace( /%s/g, function(){ return args.shift(); } );
+		return format
+			.replace( /%(\d+)\$s/g, function( match, position ) {
+				return args[ position - 1 ];
+			} )
+			.replace( /%s/g, function() {
+				return args.shift();
+			} );
 	}
 
-	function notice( type, message ) {
-		var $n = $('<div class="notice is-dismissible"><p></p><button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss</span></button></div>');
-		$n.addClass( 'notice-' + type ).find('p').text( message );
-		$notices.empty().append( $n );
+	function showNotice( type, message ) {
+		var $notice = $( '<div class="notice is-dismissible"><p></p><button type="button" class="notice-dismiss"><span class="screen-reader-text"></span></button></div>' );
+		$notice.addClass( 'notice-' + type );
+		$notice.find( 'p' ).text( message );
+		$notice.find( '.screen-reader-text' ).text( i18n.dismiss );
+		$notices.empty().append( $notice );
 
 		if ( type === 'success' ) {
-			setTimeout( function(){ $n.fadeOut( 300, function(){ $n.remove(); } ); }, 4000 );
+			setTimeout( function() {
+				$notice.fadeOut( 300, function() {
+					$notice.remove();
+				} );
+			}, 4000 );
 		}
 	}
 
-	function errorMessage( xhr ) {
-		var res = xhr && ( xhr.responseJSON || xhr );
-		return ( res && res.data && res.data.message ) ? res.data.message : i18n.request_failed;
+	// A failure is either a jqXHR or an unsuccessful wp_send_json_error() response.
+	function errorData( failure ) {
+		var response = failure && ( failure.responseJSON || failure );
+		return ( response && response.data ) || {};
 	}
 
-	function setBusy( on ) {
-		busy = on;
-		$spinner.toggleClass( 'is-active', on );
-		$buttons.prop( 'disabled', on );
-		if ( !on ) {
-			$save.prop( 'disabled', state.truncated || !state.writable );
-		}
+	function showError( failure ) {
+		showNotice( 'error', errorData( failure ).message || i18n.request_failed );
 	}
 
+	// Resolves with the response data, or rejects when the request or the action failed.
 	function request( action, data ) {
-		return $.post( ksrdlv.ajax_url, $.extend( { action: action, nonce: ksrdlv.nonce }, data || {} ) );
+		return $.post( ksrdlv.ajax_url, $.extend( { action: action, nonce: ksrdlv.nonce }, data ) )
+			.then( function( response ) {
+				return response.success ? response.data : $.Deferred().reject( response );
+			} );
+	}
+
+	// Like request(), but locks the toolbar until it's done. The lock is released before
+	// the caller's callbacks run, so they can start another action.
+	function runFileAction( action, data ) {
+		setBusy( true );
+		return request( action, data ).always( function() {
+			setBusy( false );
+		} );
+	}
+
+	function setBusy( isBusy ) {
+		busy = isBusy;
+		$spinner.toggleClass( 'is-active', isBusy );
+		$actionButtons.prop( 'disabled', isBusy );
+		if ( ! isBusy ) {
+			$saveButton.prop( 'disabled', ! isEditable() );
+		}
+	}
+
+	function isEditable() {
+		return ! file.truncated && file.writable;
 	}
 
 	function isDirty() {
-		return !state.truncated && $textarea.val() !== state.content;
+		return ! file.truncated && $textarea.val() !== file.content;
 	}
 
-	function updateDirty() {
-		$dirty.prop( 'hidden', !isDirty() );
+	function updateDirtyIndicator() {
+		$dirtyIndicator.prop( 'hidden', ! isDirty() );
 	}
 
-	function updateMeta( data ) {
+	function updateMeta( stat ) {
 		var parts = [];
-		if ( data.exists ) {
-			parts.push( data.size_h );
-			if ( data.mtime_h ) parts.push( data.mtime_h );
+		if ( stat.exists ) {
+			parts.push( stat.size_h );
+			if ( stat.mtime_h ) {
+				parts.push( stat.mtime_h );
+			}
 		} else {
 			parts.push( i18n.not_found );
 		}
@@ -92,243 +129,238 @@ jQuery(document).ready(function($){
 	/* ---------- Editor ---------- */
 
 	function updateGutter( force ) {
-		if ( $editor.hasClass('is-wrapped') ) return;
+		// The gutter is hidden while wrapping, since wrapped lines don't line up with numbers.
+		if ( $editor.hasClass( 'is-wrapped' ) ) {
+			return;
+		}
 
 		var count = $textarea.val().split( '\n' ).length;
-		if ( !force && count === lineCount ) return;
+		if ( ! force && count === lineCount ) {
+			return;
+		}
 		lineCount = count;
 
-		var lines = new Array( count );
+		var numbers = new Array( count );
 		for ( var i = 0; i < count; i++ ) {
-			lines[i] = i + 1;
+			numbers[ i ] = i + 1;
 		}
-		$gutter.text( lines.join( '\n' ) );
-		syncScroll();
+		$gutter.text( numbers.join( '\n' ) );
+		syncGutterScroll();
 	}
 
-	function syncScroll() {
+	function syncGutterScroll() {
 		$gutter.scrollTop( $textarea.scrollTop() );
 	}
 
-	function fitHeight() {
-		var top = $editor.offset().top;
-		var height = Math.max( 400, $(window).height() - top - 30 );
+	// Stretches the editor to the bottom of the window.
+	function fitEditorHeight() {
+		var height = Math.max( 400, $( window ).height() - $editor.offset().top - 30 );
 		$editor.css( 'height', height + 'px' );
 	}
 
-	function setWrap( on ) {
-		$editor.toggleClass( 'is-wrapped', on );
-		$textarea.attr( 'wrap', on ? 'soft' : 'off' );
-		if ( !on ) updateGutter( true );
+	function setWordWrap( enabled ) {
+		$editor.toggleClass( 'is-wrapped', enabled );
+		$textarea.attr( 'wrap', enabled ? 'soft' : 'off' );
+		if ( ! enabled ) {
+			updateGutter( true );
+		}
 	}
 
-	function applyLog( data ) {
-		state.content   = data.content || '';
-		state.size      = data.size;
-		state.mtime     = data.mtime;
-		state.exists    = data.exists;
-		state.truncated = !!data.truncated;
-		state.writable  = !!data.writable;
+	function showLog( log ) {
+		file.content   = log.content || '';
+		file.size      = log.size;
+		file.mtime     = log.mtime;
+		file.truncated = !! log.truncated;
+		file.writable  = !! log.writable;
 
-		$textarea.val( state.content );
-		$textarea.prop( 'readonly', state.truncated || !state.writable );
-		$textarea.attr( 'placeholder', data.exists ? '' : i18n.no_file );
-		$save.prop( 'disabled', state.truncated || !state.writable );
+		$textarea.val( file.content );
+		$textarea.prop( 'readonly', ! isEditable() );
+		$textarea.attr( 'placeholder', log.exists ? '' : i18n.no_file );
+		$saveButton.prop( 'disabled', ! isEditable() );
 
-		if ( state.truncated ) {
-			notice( 'warning', sprintf( i18n.truncated, data.max_h ) );
+		if ( file.truncated ) {
+			showNotice( 'warning', sprintf( i18n.truncated, log.max_h ) );
 		}
 
-		updateMeta( data );
+		updateMeta( log );
 		updateGutter( true );
-		updateDirty();
+		updateDirtyIndicator();
 
-		if ( $autoOpt.is(':checked') ) {
-			$textarea.scrollTop( $textarea[0].scrollHeight );
-		} else {
-			$textarea.scrollTop( 0 );
-		}
-		syncScroll();
+		$textarea.scrollTop( $autoScrollToggle.is( ':checked' ) ? $textarea[ 0 ].scrollHeight : 0 );
+		syncGutterScroll();
 	}
 
 	/* ---------- Actions ---------- */
 
-	function loadLog( showNotice ) {
-		if ( busy ) return;
-		setBusy( true );
+	function loadLog( announce ) {
+		if ( busy ) {
+			return;
+		}
 
-		request( 'ksrdlv_get_log' )
-			.done( function( res ){
-				if ( res.success ) {
-					applyLog( res.data );
-					if ( showNotice && !res.data.truncated ) notice( 'success', i18n.refreshed );
-				} else {
-					notice( 'error', errorMessage( res ) );
+		runFileAction( 'ksrdlv_get_log' )
+			.done( function( log ) {
+				showLog( log );
+				if ( announce && ! log.truncated ) {
+					showNotice( 'success', i18n.refreshed );
 				}
-			})
-			.fail( function( xhr ){ notice( 'error', errorMessage( xhr ) ); } )
-			.always( function(){ setBusy( false ); } );
+			} )
+			.fail( showError );
 	}
 
 	function saveLog( force ) {
-		if ( busy || state.truncated || !state.writable ) return;
-		setBusy( true );
+		if ( busy || ! isEditable() ) {
+			return;
+		}
 
-		var content  = $textarea.val();
-		var conflict = false;
+		var content = $textarea.val();
 
-		request( 'ksrdlv_save_log', { content: content, size: state.size, mtime: state.mtime, force: force ? 1 : 0 } )
-			.done( function( res ){
-				if ( res.success ) {
-					state.content = content;
-					state.size    = res.data.size;
-					state.mtime   = res.data.mtime;
-					state.exists  = res.data.exists;
-					$textarea.attr( 'placeholder', '' );
-					updateMeta( res.data );
-					updateDirty();
-					notice( 'success', i18n.saved );
-				} else {
-					notice( 'error', errorMessage( res ) );
-				}
-			})
-			.fail( function( xhr ){
-				var res = xhr.responseJSON;
-				if ( res && res.data && res.data.code === 'conflict' ) {
-					conflict = true;
+		runFileAction( 'ksrdlv_save_log', { content: content, size: file.size, mtime: file.mtime, force: force ? 1 : 0 } )
+			.done( function( stat ) {
+				file.content = content;
+				file.size    = stat.size;
+				file.mtime   = stat.mtime;
+				$textarea.attr( 'placeholder', '' );
+				updateMeta( stat );
+				updateDirtyIndicator();
+				showNotice( 'success', i18n.saved );
+			} )
+			.fail( function( failure ) {
+				if ( errorData( failure ).code !== 'conflict' ) {
+					showError( failure );
 					return;
 				}
-				notice( 'error', errorMessage( xhr ) );
-			})
-			.always( function(){
-				setBusy( false );
 
-				// File changed on disk since it was loaded, ask before overwriting
-				if ( conflict && window.confirm( i18n.conflict ) ) saveLog( true );
-			});
+				// The file changed on disk since it was loaded, so ask before overwriting it.
+				if ( window.confirm( i18n.conflict ) ) {
+					saveLog( true );
+				}
+			} );
 	}
 
 	function deleteLog() {
-		if ( busy || !window.confirm( i18n.confirm_delete ) ) return;
-		setBusy( true );
+		if ( busy || ! window.confirm( i18n.confirm_delete ) ) {
+			return;
+		}
 
-		request( 'ksrdlv_delete_log' )
-			.done( function( res ){
-				if ( res.success ) {
-					applyLog( res.data );
-					notice( 'success', i18n.deleted );
-				} else {
-					notice( 'error', errorMessage( res ) );
-				}
-			})
-			.fail( function( xhr ){ notice( 'error', errorMessage( xhr ) ); } )
-			.always( function(){ setBusy( false ); } );
+		runFileAction( 'ksrdlv_delete_log' )
+			.done( function( log ) {
+				showLog( log );
+				showNotice( 'success', i18n.deleted );
+			} )
+			.fail( showError );
 	}
 
-	function applyStates( states ) {
-		$.each( states, function( name, on ){
-			$wrap.find('.ksrdlv-toggle[data-constant="' + name + '"]').prop( 'checked', on );
-			$wrap.find('[data-badge="' + name + '"]')
-				.toggleClass( 'is-on', on )
-				.toggleClass( 'is-off', !on )
-				.text( on ? i18n.enabled : i18n.disabled );
-		});
+	function showConstantStates( states ) {
+		$.each( states, function( name, enabled ) {
+			$wrap.find( '.ksrdlv-toggle[data-constant="' + name + '"]' ).prop( 'checked', enabled );
+			$wrap.find( '[data-badge="' + name + '"]' )
+				.toggleClass( 'is-on', enabled )
+				.toggleClass( 'is-off', ! enabled )
+				.text( enabled ? i18n.enabled : i18n.disabled );
+		} );
 	}
 
-	function toggleConstant( $input ) {
-		var name   = $input.data('constant');
-		var value  = $input.is(':checked');
-		var $label = $input.closest('.ksrdlv-switch');
+	function toggleConstant( $toggle ) {
+		var name    = $toggle.data( 'constant' );
+		var enabled = $toggle.is( ':checked' );
+		var $switch = $toggle.closest( '.ksrdlv-switch' );
 
-		$input.prop( 'disabled', true );
-		$label.addClass('is-busy');
+		$toggle.prop( 'disabled', true );
+		$switch.addClass( 'is-busy' );
 
-		request( 'ksrdlv_toggle_constant', { constant: name, value: value ? 1 : 0 } )
-			.done( function( res ){
-				if ( res.success ) {
-					applyStates( res.data.states );
-					notice( 'success', sprintf( i18n.constant_saved, name, value ? i18n.enabled : i18n.disabled ) );
-				} else {
-					$input.prop( 'checked', !value );
-					notice( 'error', errorMessage( res ) );
-				}
-			})
-			.fail( function( xhr ){
-				$input.prop( 'checked', !value );
-				notice( 'error', errorMessage( xhr ) );
-			})
-			.always( function(){
-				$input.prop( 'disabled', false );
-				$label.removeClass('is-busy');
-			});
+		request( 'ksrdlv_toggle_constant', { constant: name, value: enabled ? 1 : 0 } )
+			.done( function( data ) {
+				showConstantStates( data.states );
+				showNotice( 'success', sprintf( i18n.constant_saved, name, enabled ? i18n.enabled : i18n.disabled ) );
+			} )
+			.fail( function( failure ) {
+				$toggle.prop( 'checked', ! enabled );
+				showError( failure );
+			} )
+			.always( function() {
+				$toggle.prop( 'disabled', false );
+				$switch.removeClass( 'is-busy' );
+			} );
 	}
 
 	/* ---------- Events ---------- */
 
-	$textarea.on( 'input', function(){
+	$textarea.on( 'input', function() {
 		updateGutter();
-		updateDirty();
-	});
+		updateDirtyIndicator();
+	} );
 
-	$textarea.on( 'scroll', syncScroll );
+	$textarea.on( 'scroll', syncGutterScroll );
 
-	// Tab inserts a tab character, like a code editor
-	$textarea.on( 'keydown', function( e ){
-		if ( e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || this.readOnly ) return;
-		e.preventDefault();
-
-		// execCommand keeps the native undo stack, setRangeText is the fallback
-		if ( !document.execCommand || !document.execCommand( 'insertText', false, '\t' ) ) {
-			this.setRangeText( '\t', this.selectionStart, this.selectionEnd, 'end' );
-			$textarea.trigger('input');
+	// Tab inserts a tab character, like a code editor.
+	$textarea.on( 'keydown', function( event ) {
+		if ( event.key !== 'Tab' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || this.readOnly ) {
+			return;
 		}
-	});
+		event.preventDefault();
 
-	// Ctrl/Cmd + S saves
-	$(document).on( 'keydown', function( e ){
-		if ( ( e.ctrlKey || e.metaKey ) && !e.altKey && ( e.key === 's' || e.key === 'S' ) ) {
-			e.preventDefault();
+		// execCommand keeps the native undo stack; setRangeText is the fallback.
+		if ( ! document.execCommand || ! document.execCommand( 'insertText', false, '\t' ) ) {
+			this.setRangeText( '\t', this.selectionStart, this.selectionEnd, 'end' );
+			$textarea.trigger( 'input' );
+		}
+	} );
+
+	// Ctrl/Cmd + S saves.
+	$( document ).on( 'keydown', function( event ) {
+		if ( ( event.ctrlKey || event.metaKey ) && ! event.altKey && ( event.key === 's' || event.key === 'S' ) ) {
+			event.preventDefault();
 			saveLog( false );
 		}
-	});
+	} );
 
-	$wrap.on( 'click', '.ksrdlv-save', function(){ saveLog( false ); } );
+	$wrap.on( 'click', '.ksrdlv-save', function() {
+		saveLog( false );
+	} );
+
 	$wrap.on( 'click', '.ksrdlv-delete', deleteLog );
-	$wrap.on( 'click', '.ksrdlv-refresh', function(){
-		if ( isDirty() && !window.confirm( i18n.confirm_reload ) ) return;
+
+	$wrap.on( 'click', '.ksrdlv-refresh', function() {
+		if ( isDirty() && ! window.confirm( i18n.confirm_reload ) ) {
+			return;
+		}
 		loadLog( true );
-	});
+	} );
 
-	$wrap.on( 'change', '.ksrdlv-toggle', function(){ toggleConstant( $(this) ); } );
+	$wrap.on( 'change', '.ksrdlv-toggle', function() {
+		toggleConstant( $( this ) );
+	} );
 
-	$notices.on( 'click', '.notice-dismiss', function(){
-		$(this).closest('.notice').remove();
-	});
+	$notices.on( 'click', '.notice-dismiss', function() {
+		$( this ).closest( '.notice' ).remove();
+	} );
 
-	$wrapOpt.on( 'change', function(){
-		var on = $(this).is(':checked');
-		storageSet( 'wrap', on );
-		setWrap( on );
-	});
+	$wordWrapToggle.on( 'change', function() {
+		var enabled = $( this ).is( ':checked' );
+		saveOption( 'wrap', enabled );
+		setWordWrap( enabled );
+	} );
 
-	$autoOpt.on( 'change', function(){
-		storageSet( 'autoscroll', $(this).is(':checked') );
-	});
+	$autoScrollToggle.on( 'change', function() {
+		saveOption( 'autoscroll', $( this ).is( ':checked' ) );
+	} );
 
-	$(window).on( 'beforeunload', function( e ){
-		if ( !isDirty() ) return;
-		e.preventDefault();
-		e.originalEvent.returnValue = i18n.unsaved;
+	$( window ).on( 'beforeunload', function( event ) {
+		if ( ! isDirty() ) {
+			return;
+		}
+		event.preventDefault();
+		event.originalEvent.returnValue = i18n.unsaved;
 		return i18n.unsaved;
-	});
+	} );
 
-	$(window).on( 'resize', fitHeight );
+	$( window ).on( 'resize', fitEditorHeight );
 
 	/* ---------- Init ---------- */
 
-	$wrapOpt.prop( 'checked', storageGet( 'wrap', true ) );
-	$autoOpt.prop( 'checked', storageGet( 'autoscroll', true ) );
-	setWrap( $wrapOpt.is(':checked') );
-	fitHeight();
+	$wordWrapToggle.prop( 'checked', readOption( 'wrap', true ) );
+	$autoScrollToggle.prop( 'checked', readOption( 'autoscroll', true ) );
+	setWordWrap( $wordWrapToggle.is( ':checked' ) );
+	fitEditorHeight();
 	loadLog( false );
-});
+} );
