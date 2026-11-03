@@ -7,11 +7,13 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class Admin_Page {
 
 	const SLUG       = 'ksr-debug-log-viewer';
-	const SCREEN_IDS = array( 'tools_page_ksr-debug-log-viewer', 'settings_page_ksr-debug-log-viewer-network' );
+	// Hidden pages (no parent menu) get the "admin_page_" prefix, and network admin screens the "-network" suffix
+	const SCREEN_IDS = array( 'admin_page_ksr-debug-log-viewer', 'admin_page_ksr-debug-log-viewer-network' );
 
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'network_admin_menu', array( $this, 'add_network_menu' ) );
+		add_action( 'admin_bar_menu', array( $this, 'add_admin_bar_node' ), 100 );
 	}
 
 	// When network-activated, the page lives only in Network Admin, since the log and wp-config.php are shared by all sites
@@ -29,27 +31,48 @@ class Admin_Page {
 		return current_user_can( self::capability() ) && current_user_can( 'edit_files' );
 	}
 
+	public static function url(): string {
+		$path = 'admin.php?page=' . self::SLUG;
+		return self::is_network_page() ? network_admin_url( $path ) : admin_url( $path );
+	}
+
 	public function add_menu(){
 		if ( self::is_network_page() ) return;
-
-		add_management_page(
-			__( 'KSR Debug Log Viewer', 'ksr-debug-log-viewer' ),
-			__( 'Debug Log', 'ksr-debug-log-viewer' ),
-			self::capability(),
-			self::SLUG,
-			array( $this, 'render' )
-		);
+		$this->register_page();
 	}
 
 	public function add_network_menu(){
-		add_submenu_page(
-			'settings.php',
-			__( 'KSR Debug Log Viewer', 'ksr-debug-log-viewer' ),
+		$this->register_page();
+	}
+
+	// Registered without a parent so it stays out of the sidebar; it is reached from the admin bar instead
+	private function register_page(){
+		$page_title = __( 'KSR Debug Log Viewer', 'ksr-debug-log-viewer' );
+
+		$hook = add_submenu_page(
+			'',
+			$page_title,
 			__( 'Debug Log', 'ksr-debug-log-viewer' ),
 			self::capability(),
 			self::SLUG,
 			array( $this, 'render' )
 		);
+
+		// Core can't find the title of a page outside the menu, which leaves the browser tab title empty
+		add_action( 'load-' . $hook, function() use ( $page_title ) {
+			$GLOBALS['title'] = $page_title;
+		} );
+	}
+
+	// The plugin only loads in wp-admin, so this link never shows on the frontend
+	public function add_admin_bar_node( \WP_Admin_Bar $bar ){
+		if ( !current_user_can( self::capability() ) ) return;
+
+		$bar->add_node( array(
+			'id'    => 'ksrdlv',
+			'title' => esc_html__( 'Debug Log', 'ksr-debug-log-viewer' ),
+			'href'  => self::url(),
+		) );
 	}
 
 	public function render(){

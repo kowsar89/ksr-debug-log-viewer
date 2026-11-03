@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KSR Debug Log Viewer
  * Plugin URI: https://github.com/kowsar89/ksr-debug-log-viewer/
- * Description: View, edit and delete the debug.log file, and toggle WP_DEBUG, WP_DEBUG_LOG and WP_DEBUG_DISPLAY from Tools → Debug Log
+ * Description: View, edit and delete the debug.log file, and toggle WP_DEBUG, WP_DEBUG_LOG and WP_DEBUG_DISPLAY from the Debug Log link in the admin bar
  * Version: 1.0.0
  * Requires PHP: 7.4
  * Author: Kowsar Hossain
